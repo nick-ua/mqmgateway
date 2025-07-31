@@ -1,10 +1,10 @@
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include "config.hpp"
 #include "common.hpp"
 #include "yaml_converters.hpp"
 #include "spdlog/spdlog.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace modmqttd {
 

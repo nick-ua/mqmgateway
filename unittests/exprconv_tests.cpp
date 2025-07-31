@@ -7,11 +7,7 @@
 
 TEST_CASE ("A number should be converted by exprtk") {
     std::string stdconv_path = "../exprconv/exprconv.so";
-    std::shared_ptr<ConverterPlugin> plugin = modmqttd::boost_dll_import<ConverterPlugin>(
-        stdconv_path,
-        "converter_plugin",
-        boost::dll::load_mode::append_decorations
-    );
+    std::shared_ptr<ConverterPlugin> plugin = modmqttd::dll_import<ConverterPlugin>(stdconv_path,"converter_plugin");
     std::shared_ptr<DataConverter> conv(plugin->getConverter("evaluate"));
 
     SECTION("when precision is not set") {
@@ -36,11 +32,7 @@ TEST_CASE ("A number should be converted by exprtk") {
 
 TEST_CASE("A 32-bit number should be converted by exprtk") {
     std::string stdconv_path = "../exprconv/exprconv.so";
-    std::shared_ptr<ConverterPlugin> plugin = modmqttd::boost_dll_import<ConverterPlugin>(
-        stdconv_path,
-        "converter_plugin",
-        boost::dll::load_mode::append_decorations
-    );
+    std::shared_ptr<ConverterPlugin> plugin = modmqttd::dll_import<ConverterPlugin>(stdconv_path,"converter_plugin");
     std::shared_ptr<DataConverter> conv(plugin->getConverter("evaluate"));
 
     SECTION("when two registers contain a signed integer") {
@@ -121,11 +113,7 @@ TEST_CASE("A 32-bit number should be converted by exprtk") {
 
 TEST_CASE ("A uint16_t register data should be converted to exprtk value") {
     std::string stdconv_path = "../exprconv/exprconv.so";
-    std::shared_ptr<ConverterPlugin> plugin = modmqttd::boost_dll_import<ConverterPlugin>(
-        stdconv_path,
-        "converter_plugin",
-        boost::dll::load_mode::append_decorations
-    );
+    std::shared_ptr<ConverterPlugin> plugin = modmqttd::dll_import<ConverterPlugin>(stdconv_path,"converter_plugin");
     std::shared_ptr<DataConverter> conv(plugin->getConverter("evaluate"));
 
     conv->setArgs({"int16(R0)"});

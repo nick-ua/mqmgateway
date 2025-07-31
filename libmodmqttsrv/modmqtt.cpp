@@ -1,8 +1,6 @@
 #include <string>
 #include <regex>
 #include <yaml-cpp/yaml.h>
-#include <boost/dll/import.hpp>
-#include <boost/algorithm/string.hpp>
 
 
 #include "common.hpp"
@@ -275,11 +273,11 @@ ModMqtt::initServer(const YAML::Node& config) {
 std::shared_ptr<ConverterPlugin>
 ModMqtt::initConverterPlugin(const std::string& name) {
     std::string final_path;
-    boost::filesystem::path current_path = name;
+    std::filesystem::path current_path = name;
     auto path_it = mConverterPaths.begin();
     do {
         spdlog::debug("Checking {}", name);
-        if (boost::filesystem::exists(current_path)) {
+        if (std::filesystem::exists(current_path)) {
             final_path = current_path.string();
             break;
         }
@@ -299,11 +297,7 @@ ModMqtt::initConverterPlugin(const std::string& name) {
 
     spdlog::debug("Trying to load converter plugin from {}", final_path);
 
-    std::shared_ptr<ConverterPlugin> plugin = modmqttd::boost_dll_import<ConverterPlugin>(
-        final_path,
-        "converter_plugin",
-        boost::dll::load_mode::append_decorations
-    );
+    std::shared_ptr<ConverterPlugin> plugin = modmqttd::dll_import<ConverterPlugin>(final_path,"converter_plugin");
 
     return plugin;
 }

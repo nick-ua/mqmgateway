@@ -7,11 +7,7 @@
 TEST_CASE("When reading int8 byte from single register") {
     std::string stdconv_path = "../stdconv/stdconv.so";
 
-    std::shared_ptr<ConverterPlugin> plugin = modmqttd::boost_dll_import<ConverterPlugin>(
-        stdconv_path,
-        "converter_plugin",
-        boost::dll::load_mode::append_decorations
-    );
+    std::shared_ptr<ConverterPlugin> plugin = modmqttd::dll_import<ConverterPlugin>(stdconv_path,"converter_plugin");
 
     std::shared_ptr<DataConverter> conv(plugin->getConverter("int8"));
     ModbusRegisters input(0xff01);
@@ -38,11 +34,7 @@ TEST_CASE("When reading int8 byte from single register") {
 TEST_CASE("When reading uint8 byte from single register") {
     std::string stdconv_path = "../stdconv/stdconv.so";
 
-    std::shared_ptr<ConverterPlugin> plugin = modmqttd::boost_dll_import<ConverterPlugin>(
-        stdconv_path,
-        "converter_plugin",
-        boost::dll::load_mode::append_decorations
-    );
+    std::shared_ptr<ConverterPlugin> plugin = modmqttd::dll_import<ConverterPlugin>(stdconv_path,"converter_plugin");
 
     std::shared_ptr<DataConverter> conv(plugin->getConverter("uint8"));
     ModbusRegisters input(0xff01);

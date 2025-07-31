@@ -7,11 +7,7 @@
 TEST_CASE("A one uint16 register value should be multipled") {
     std::string stdconv_path = "../stdconv/stdconv.so";
 
-    std::shared_ptr<ConverterPlugin> plugin = modmqttd::boost_dll_import<ConverterPlugin>(
-        stdconv_path,
-        "converter_plugin",
-        boost::dll::load_mode::append_decorations
-    );
+    std::shared_ptr<ConverterPlugin> plugin = modmqttd::dll_import<ConverterPlugin>(stdconv_path,"converter_plugin");
     std::shared_ptr<DataConverter> conv(plugin->getConverter("multiply"));
     std::vector<std::string> args = {
         "2"
