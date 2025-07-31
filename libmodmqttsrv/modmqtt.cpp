@@ -45,7 +45,8 @@ class RegisterConfigName {
     public:
         RegisterConfigName(const YAML::Node& data, const std::string& default_network, int default_slave) {
             std::string str = ConfigTools::readRequiredString(data, "register");
-            boost::trim(str);
+            std::regex re_trim("^\\s+|\\s+$");
+            str = std::regex_replace(str, re_trim, "");
 
             std::regex re("^([a-zA-Z][a-zA-Z0-9]+\\.)?([0-9]+\\.)?((0[xX])?[0-9a-fA-F]+)$");
             std::cmatch matches;

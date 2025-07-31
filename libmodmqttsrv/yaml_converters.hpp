@@ -85,14 +85,16 @@ struct YAML::convert<std::vector<std::pair<int,int>>> {
     }
 
     static bool decode(const YAML::Node& node, std::vector<std::pair<int,int>>& value) {
-        boost::char_separator<char> sep = boost::char_separator<char>(",");
         const std::regex re_range("\\s*([0-9]+)-([0-9]+)\\s*");
 
         std::string strval(node.as<std::string>());
-        boost::trim(strval);
+        std::regex re_trim("^\\s+|\\s+$");
+        strval = std::regex_replace(strval, re_trim, "");
 
-        boost::tokenizer<boost::char_separator<char>> tokens(strval, sep);
-        for (const std::string& t : tokens) {
+        std::istringstream iss(strval);
+        std::string t;
+        while (std::getline(iss, t, ','))
+        {
             std::cmatch matches;
             std::pair<int,int> item;
             if (std::regex_match(t.c_str(), matches, re_range)) {
@@ -113,16 +115,14 @@ struct YAML::convert<std::vector<std::pair<int,int>>> {
 template<>
 struct YAML::convert<std::vector<std::string>> {
     static bool decode(const YAML::Node& node, std::vector<std::string>& value) {
-        boost::char_separator<char> sep = boost::char_separator<char>(",");
-
         std::string strval(node.as<std::string>());
-        boost::trim(strval);
-
-        boost::tokenizer<boost::char_separator<char>> tokens(strval, sep);
-        for (const std::string& t : tokens) {
-            std::string val(t);
-            boost::trim(val);
-            value.push_back(val);
+        std::istringstream iss(strval);
+        std::string token;
+        while (std::getline(iss, token, ','))
+        {
+            std::regex re_trim("^\\s+|\\s+$");
+            token = std::regex_replace(token, re_trim, "");
+            value.push_back(token);
         }
 
         return true;
