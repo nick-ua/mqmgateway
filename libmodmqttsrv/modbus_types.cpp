@@ -1,9 +1,9 @@
 
 #include "modbus_types.hpp"
 
-namespace modmqttd {
+#include "spdlog/spdlog.h"
 
-boost::log::sources::severity_logger<Log::severity> ModbusAddressRange::log;
+namespace modmqttd {
 
 bool
 ModbusAddressRange::overlaps(const ModbusAddressRange& poll) const {
@@ -20,10 +20,12 @@ ModbusAddressRange::merge(const ModbusAddressRange& other) {
     int first = firstRegister() <= other.firstRegister() ? firstRegister() : other.firstRegister();
     int last = lastRegister() >= other.lastRegister() ? lastRegister() : other.lastRegister();
 
-    BOOST_LOG_SEV(log, Log::debug) << "Extending register "
-    << mRegister << "(" << mCount << ") to "
-    << first << "(" <<  last-first+1 << ")";
-
+    spdlog::debug("Extending register {}({}) to {}({})", \
+        mRegister, \
+        mCount, \
+        first, \
+        last - first + 1
+    );
     mRegister = first;
     mCount = last - mRegister + 1;
 }

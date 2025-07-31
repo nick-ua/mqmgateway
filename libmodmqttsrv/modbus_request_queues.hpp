@@ -1,6 +1,8 @@
 #pragma once
 
 #include <deque>
+#include <memory>
+#include <algorithm>
 
 #include "common.hpp"
 #include "register_poll.hpp"

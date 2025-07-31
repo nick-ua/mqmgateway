@@ -2,9 +2,10 @@
 
 #include <deque>
 
-namespace modmqttd {
+#include "spdlog/spdlog.h"
 
-boost::log::sources::severity_logger<Log::severity> MsgRegisterPollSpecification::log;
+
+namespace modmqttd {
 
 #if __cplusplus < 201703L
 constexpr std::chrono::milliseconds MsgRegisterPoll::INVALID_REFRESH;
@@ -19,7 +20,10 @@ MsgRegisterPoll::merge(const MsgRegisterPoll& other) {
         mRefreshMsec = other.mRefreshMsec;
     } else if (other.mRefreshMsec != INVALID_REFRESH && mRefreshMsec > other.mRefreshMsec) {
         mRefreshMsec = other.mRefreshMsec;
-        BOOST_LOG_SEV(log, Log::debug) << "Setting refresh " << mRefreshMsec.count() << "ms on existing register " << mRegister;
+        spdlog::debug("Setting refresh {}ms on existing register {}", \
+            mRefreshMsec.count(), \
+            mRegister \
+        );        
     }
 }
 
@@ -102,9 +106,14 @@ MsgRegisterPollSpecification::merge(const MsgRegisterPoll& poll) {
     }
 
     if (overlaped.empty()) {
-        BOOST_LOG_SEV(log, Log::debug) << "Adding new register " << poll.mSlaveId << "." << poll.mRegister <<
-        " (" << poll.mCount << ")" << " type=" << poll.mRegisterType << " refresh=" <<
-        poll.mRefreshMsec.count() << " on network " << mNetworkName;
+        spdlog::debug("Adding new register {}.{} ({}) type={} refresh={} on network {}", \
+            poll.mSlaveId, \
+            poll.mRegister, \
+            poll.mCount, \
+            poll.mRegisterType, \
+            poll.mRefreshMsec.count(), \
+            mNetworkName \
+        );
         mRegisters.push_back(poll);
     } else {
         mRegisters.push_back(poll);

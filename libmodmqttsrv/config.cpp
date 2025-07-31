@@ -2,12 +2,12 @@
 #include "config.hpp"
 #include "common.hpp"
 #include "yaml_converters.hpp"
+#include "spdlog/spdlog.h"
 
 namespace fs = boost::filesystem;
 
 namespace modmqttd {
 
-boost::log::sources::severity_logger<Log::severity> ModbusNetworkConfig::log;
 
 #if __cplusplus < 201703L
 constexpr std::chrono::milliseconds ModbusNetworkConfig::MAX_RESPONSE_TIMEOUT;
@@ -43,7 +43,7 @@ ModbusNetworkConfig::ModbusNetworkConfig(const YAML::Node& source) {
 
     std::chrono::milliseconds tmpval;
     if (ConfigTools::readOptionalValue<std::chrono::milliseconds>(tmpval, source, "min_delay_before_poll")) {
-        BOOST_LOG_SEV(log, Log::warn) << "'min_delay_before_poll' is deprecated and will be removed in future releases. Rename it to 'delay_before_command'";
+        spdlog::warn("'min_delay_before_poll' is deprecated and will be removed in future releases. Rename it to 'delay_before_command'");
         setDelayBeforeCommand(tmpval);
     }
 

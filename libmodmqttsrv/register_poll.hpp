@@ -8,6 +8,7 @@
 #include "common.hpp"
 #include "modbus_messages.hpp"
 #include "modbus_types.hpp"
+#include <memory>
 
 namespace modmqttd {
 

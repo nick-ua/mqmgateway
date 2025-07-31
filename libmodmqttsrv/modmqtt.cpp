@@ -19,6 +19,8 @@
 
 #include <csignal>
 #include <iostream>
+#include "spdlog/spdlog.h"
+#include <filesystem>
 
 namespace
 {
@@ -130,8 +132,6 @@ parsePayloadType(const YAML::Node& data) {
     throw ConfigurationException(data.Mark(), std::string("Unknown payload type ") + ptype);
 }
 
-boost::log::sources::severity_logger<Log::severity> ModMqtt::log;
-
 ModMqtt::ModMqtt()
 {
     // unit tests create main class multiple times
@@ -145,7 +145,7 @@ ModMqtt::ModMqtt()
 void ModMqtt::init(const std::string& configPath) {
     std::string targetPath(configPath);
     if (configPath.empty()) {
-        BOOST_LOG_SEV(log, Log::warn) << "No config path, trying to read config.yaml from working directory";
+        spdlog::warn("No config path, trying to read config.yaml from working directory");
         targetPath = "./config.yaml";
     }
     YAML::Node config = YAML::LoadFile(targetPath);
@@ -177,7 +177,7 @@ ModMqtt::init(const YAML::Node& config) {
         );
 
         if (mqtt_spec == mqtt_specs.end()) {
-            BOOST_LOG_SEV(log, Log::error) << "No mqtt topics declared for [" << netname << "], ignoring poll group";
+            spdlog::error("No mqtt topics declared for [{}], ignoring poll group", netname);
             continue;
         } else {
             for(const auto& reg: mqtt_spec->mRegisters) {
@@ -190,9 +190,9 @@ ModMqtt::init(const YAML::Node& config) {
             [&netname](const std::shared_ptr<ModbusClient>& client) -> bool { return client->mNetworkName == netname; }
         );
         if (client == mModbusClients.end()) {
-            BOOST_LOG_SEV(log, Log::error) << "Modbus client for network [" << netname << "] not initialized, ignoring specification";
+            spdlog::error("Modbus client for network [{}] not initialized, ignoring specification", netname);
         } else {
-            BOOST_LOG_SEV(log, Log::debug) << "Sending register specification to modbus thread for network " << netname;
+            spdlog::debug("Sending register specification to modbus thread for network {}", netname);
             (*client)->mToModbusQueue.enqueue(QueueItem::create(*sit));
         }
     };
@@ -262,7 +262,7 @@ ModMqtt::initServer(const YAML::Node& config) {
                     throw ConfigurationException(config.Mark(), std::string("Converter plugin ") + plugin->getName() + " already loaded");
                 }
 
-                BOOST_LOG_SEV(log, Log::info) << "Added converter plugin " << plugin->getName();
+                spdlog::info("Added converter plugin {}", plugin->getName());
                 mConverterPlugins.push_back(plugin);
             } catch (const std::exception& ex) {
                 throw ConfigurationException(config.Mark(), ex.what());
@@ -277,7 +277,7 @@ ModMqtt::initConverterPlugin(const std::string& name) {
     boost::filesystem::path current_path = name;
     auto path_it = mConverterPaths.begin();
     do {
-        BOOST_LOG_SEV(log, Log::debug) << "Checking " << current_path;
+        spdlog::debug("Checking {}", name);
         if (boost::filesystem::exists(current_path)) {
             final_path = current_path.string();
             break;
@@ -296,7 +296,7 @@ ModMqtt::initConverterPlugin(const std::string& name) {
         throw ConvPluginNotFoundException(std::string("Converter plugin ") + name + " not found");
     }
 
-    BOOST_LOG_SEV(log, Log::debug) << "Trying to load converter plugin from " << final_path;
+    spdlog::debug("Trying to load converter plugin from {}", final_path);
 
     std::shared_ptr<ConverterPlugin> plugin = modmqttd::boost_dll_import<ConverterPlugin>(
         final_path,
@@ -322,7 +322,7 @@ void ModMqtt::initBroker(const YAML::Node& config) {
     MqttBrokerConfig brokerConfig(broker);
 
     mMqtt->setBrokerConfig(brokerConfig);
-    BOOST_LOG_SEV(log, Log::debug) << "Broker configuration initialized";
+    spdlog::debug("Broker configuration initialized");
 }
 
 std::vector<modmqttd::MsgRegisterPoll>
@@ -408,13 +408,13 @@ ModMqtt::initModbusClients(const YAML::Node& config) {
 
         const YAML::Node& old_groups(network["poll_groups"]);
         if (old_groups.IsDefined()) {
-            BOOST_LOG_SEV(log, Log::warn) << "'network.poll_groups' are deprecated and will be removed in future releases. Please use 'slaves' section and define per-slave poll_groups instead";
+            spdlog::warn("'network.poll_groups' are deprecated and will be removed in future releases. Please use 'slaves' section and define per-slave poll_groups instead");
             spec.merge(readModbusPollGroups(modbus_config.mName, -1, old_groups));
         }
         ret.mPollSpecification.push_back(spec);
     }
     mMqtt->setModbusClients(mModbusClients);
-    BOOST_LOG_SEV(log, Log::debug) << mModbusClients.size() << " modbus client(s) initialized";
+    spdlog::debug("{} modbus client(s) initialized", mModbusClients.size());
     return ret;
 }
 
@@ -470,7 +470,7 @@ ModMqtt::parseObject(
     }
 
     MqttObject ret(topic);
-    BOOST_LOG_SEV(log, Log::debug) << "processing object " << ret.getTopic();
+    spdlog::debug("processing object {}", ret.getTopic() );
 
     bool retain = true;
     if (ConfigTools::readOptionalValue<bool>(retain, pData, "retain"))
@@ -516,9 +516,7 @@ ModMqtt::parseObject(
 
     ret.setPublishMode(pmode, everyPollRefresh);
     if (pmode == PublishMode::EVERY_POLL) {
-        BOOST_LOG_SEV(log, Log::debug)
-            << "Min publish rate for " << ret.getStateTopic() << " set to "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(everyPollRefresh).count() << "ms";
+        spdlog::debug("Min publish rate for {} set to {}ms", ret.getStateTopic(), std::chrono::duration_cast<std::chrono::milliseconds>(everyPollRefresh).count());
     }
 
     if (!yAvail.IsDefined())
@@ -788,13 +786,13 @@ ModMqtt::initObjects(const YAML::Node& config, const ModMqtt::ModbusInitData& mo
 
                     objects.push_back(object);
                     nextCommandId = parseObjectCommands(object.getTopic(), nextCommandId, objdata["commands"], currentNetwork, defaultSlaveId);
-                    BOOST_LOG_SEV(log, Log::debug) << "object for topic " << object.getTopic() << " created";
+                    spdlog::debug("object for topic {} created", object.getTopic());
                     created.insert(defaultSlaveId);
                 }
             }
         }
     }
-    BOOST_LOG_SEV(log, Log::debug) << "Finished reading mqtt object declarations";
+    spdlog::debug("Finished reading mqtt object declarations"); 
     return objects;
 }
 
@@ -840,11 +838,11 @@ void ModMqtt::start() {
 
     // TODO if broker is down and modbus is up then mSlaveQueues will grow forever and
     // memory allocated by queues will never be released. Add MsgStartPolling?
-    BOOST_LOG_SEV(log, Log::debug) << "Performing initial connection to mqtt broker";
+    spdlog::debug("Performing initial connection to mqtt broker"); \
     do {
         mMqtt->start();
         if (mMqtt->isConnected()) {
-            BOOST_LOG_SEV(log, Log::debug) << "Broker connected, entering main loop";
+            spdlog::debug("Broker connected, entering main loop");
             break;
         }
         waitForSignal();
@@ -858,7 +856,7 @@ void ModMqtt::start() {
             int currentSignal = gSignalStatus;
             gSignalStatus = -1;
             if (currentSignal == SIGTERM) {
-                BOOST_LOG_SEV(log, Log::info) << "Got SIGTERM, exiting…";
+                spdlog::info("Got SIGTERM, exiting…");
                 break;
             } else if (currentSignal == SIGHUP) {
                 //TODO reload configuration, reconnect broker and
@@ -866,12 +864,12 @@ void ModMqtt::start() {
             }
             currentSignal = -1;
         } else if (gSignalStatus == 0) {
-            BOOST_LOG_SEV(log, Log::info) << "Got stop request, exiting…";
+            spdlog::info("Got stop request, exiting…");
             break;
         }
     };
 
-    BOOST_LOG_SEV(log, Log::info) << "Stopping modbus clients";
+    spdlog::info("Stopping modbus clients");
     for(std::vector<std::shared_ptr<ModbusClient>>::iterator client = mModbusClients.begin();
         client < mModbusClients.end(); client++)
     {
@@ -882,7 +880,7 @@ void ModMqtt::start() {
     processModbusMessages();
 
     if (mMqtt->isConnected()) {
-        BOOST_LOG_SEV(log, Log::info) << "Publishing availability status 0 for all registers";
+        spdlog::info("Publishing availability status 0 for all registers");
         for(std::vector<std::shared_ptr<ModbusClient>>::iterator client = mModbusClients.begin();
             client < mModbusClients.end(); client++)
         {
@@ -890,26 +888,26 @@ void ModMqtt::start() {
         }
     }
 
-    BOOST_LOG_SEV(log, Log::debug) << "Shutting down mosquitto client";
+    spdlog::debug("Shutting down mosquitto client");
     // If connected, then shutdown()
     // will send disconnection request to mqtt broker.
     // After disconnection mMqtt will notify global queue mutex
     // Otherwise we are already stopped.
     mMqtt->shutdown();
     if (mMqtt->isStarted()) {
-        BOOST_LOG_SEV(log, Log::debug) << "Waiting for disconnection event";
+        spdlog::debug("Waiting for disconnection event");
         waitForQueues();
     }
 
     //TODO mosquitto thread could add some messages to
     //mModbusClients queue between ModbusClient::stop() and MqttClient::shutdown()
     //Cleanup those messages here
-    BOOST_LOG_SEV(log, Log::info) << "Shutdown finished";
+    spdlog::info("Shutdown finished");
 }
 
 void
 ModMqtt::stop() {
-    BOOST_LOG_SEV(log, Log::debug) << "Sending stop request to ModMqtt server";
+    spdlog::debug("Sending stop request to ModMqtt server");
     gSignalStatus = 0;
     notifyQueues();
 }
@@ -934,7 +932,7 @@ ModMqtt::processModbusMessages() {
                 std::unique_ptr<MsgModbusNetworkState> val(item.getData<MsgModbusNetworkState>());
                 mMqtt->processModbusNetworkState(val->mNetworkName, val->mIsUp);
             } else {
-                BOOST_LOG_SEV(log, Log::error) << "Unknown message from modbus thread, ignoring";
+                spdlog::error("Unknown message from modbus thread, ignoring");
             }
         }
     }

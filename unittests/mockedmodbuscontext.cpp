@@ -9,6 +9,7 @@
 #include "libmodmqttsrv/modbus_context.hpp"
 #include "libmodmqttsrv/debugtools.hpp"
 #include "libmodmqttsrv/register_poll.hpp"
+#include "spdlog/spdlog.h"
 
 const std::chrono::milliseconds MockedModbusContext::sDefaultSlaveReadTime = std::chrono::milliseconds(5);
 const std::chrono::milliseconds MockedModbusContext::sDefaultSlaveWriteTime = std::chrono::milliseconds(10);
@@ -220,9 +221,7 @@ MockedModbusContext::readModbusRegisters(int slaveId, const modmqttd::RegisterPo
 
 
     if (mInternalOperation)
-        BOOST_LOG_SEV(log, modmqttd::Log::info) << "TEST: modbus " << mNetworkName
-            << "." << it->second.mId << "." << regData.mRegister
-            << " READ: " << modmqttd::DebugTools::registersToStr(ret);
+        spdlog::info("TEST: modbus {}.{}.{} READ: {}", mNetworkName, it->second.mId, regData.mRegister, modmqttd::DebugTools::registersToStr(ret));
 
     mInternalOperation = false;
     mLastPollTime = std::chrono::steady_clock::now();
@@ -271,10 +270,13 @@ MockedModbusContext::writeModbusRegisters(int pSlaveId, const modmqttd::Register
     std::unique_lock<std::mutex> lck(mMutex);
     std::map<int, Slave>::iterator it = findOrCreateSlave(pSlaveId);
 
-    if (mInternalOperation)
-        BOOST_LOG_SEV(log, modmqttd::Log::info) << "TEST: modbus: " << mNetworkName
-            << "." << it->second.mId << "." << msg.mRegister
-            << " WRITE: " << modmqttd::DebugTools::registersToStr(msg.mValues.values());
+    if (mInternalOperation)            
+        spdlog::info("TEST: modbus: {}.{}.{} WRITE: {}", \
+                mNetworkName, \
+                it->second.mId, \
+                msg.mRegister, \
+                modmqttd::DebugTools::registersToStr(msg.mValues.values()) \
+        );
     it->second.write(msg, mInternalOperation);
     mInternalOperation = false;
 }
@@ -319,8 +321,14 @@ MockedModbusContext::getModbusRegisterValue(int slaveId, int regNum, modmqttd::R
 
 uint16_t
 MockedModbusContext::waitForModbusValue(int slaveId, int regNum, modmqttd::RegisterType regType, uint16_t val, std::chrono::milliseconds timeout) {
-    BOOST_LOG_SEV(log, modmqttd::Log::info) << "TEST: Waiting " << timeout.count() << "ms for value " << val << " in register " << slaveId << "." << regNum << ", type=" << std::to_string(regType);
-
+   
+    spdlog::info("TEST: Waiting {}ms for value {} in register {}.{}, type={}", \
+        timeout.count(), \
+        val, \
+        slaveId, \
+        regNum, \
+        std::to_string(regType) \
+    );
     std::mutex m;
     std::unique_lock<std::mutex> lck(m);
 
@@ -344,8 +352,7 @@ MockedModbusContext::waitForModbusValue(int slaveId, int regNum, modmqttd::Regis
 
 void
 MockedModbusContext::waitForInitialPoll(std::chrono::milliseconds timeout) {
-    BOOST_LOG_SEV(log, modmqttd::Log::info) << "TEST: Waiting " << timeout.count() << "ms for initialPoll";
-
+    spdlog::info("TEST: Waiting {}ms for initialPoll", timeout.count());
     std::mutex m;
     std::unique_lock<std::mutex> lck(m);
 
@@ -365,8 +372,7 @@ MockedModbusContext::waitForInitialPoll(std::chrono::milliseconds timeout) {
         } while (dur < timeout.count());
     }
     if (unreadedRegisters != 0)
-        BOOST_LOG_SEV(log, modmqttd::Log::error) << "TEST: Not all registers were read in " << timeout.count() << "ms";
-
+        spdlog::error("TEST: Not all registers were read in {}ms", timeout.count() );
     REQUIRE(unreadedRegisters == 0);
 }
 

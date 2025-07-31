@@ -6,10 +6,9 @@
 #include "modbus_thread.hpp"
 #include "modbus_types.hpp"
 #include "queue_item.hpp"
+#include "spdlog/spdlog.h"
 
 namespace modmqttd {
-
-boost::log::sources::severity_logger<Log::severity> ModbusExecutor::log;
 
 #if __cplusplus < 201703L
 constexpr short ModbusExecutor::WRITE_BATCH_SIZE;
@@ -37,7 +36,7 @@ ModbusExecutor::sendMessage(const QueueItem& item) {
 void
 ModbusExecutor::setupInitialPoll(const std::map<int, std::vector<std::shared_ptr<RegisterPoll>>>& pRegisters) {
     addPollList(pRegisters, true);
-    BOOST_LOG_SEV(log, Log::debug) << "starting initial poll";
+    spdlog::debug("starting initial poll");
 }
 
 
@@ -48,7 +47,7 @@ ModbusExecutor::addPollList(const std::map<int, std::vector<std::shared_ptr<Regi
 
     if (mInitialPoll) {
         if (!pollDone()) {
-            BOOST_LOG_SEV(log, Log::error) << "Cannot add next registers before initial poll is finished. Fix control loop.";
+            spdlog::error("Cannot add next registers before initial poll is finished. Fix control loop.");
             return;
         }
     }
@@ -78,7 +77,7 @@ ModbusExecutor::addPollList(const std::map<int, std::vector<std::shared_ptr<Regi
     // and find the best one that fits in the last_silence_period
     auto last_silence_period = std::chrono::steady_clock::now() - mLastCommandTime;
 
-    BOOST_LOG_SEV(log, Log::trace) << "Starting election for silence period " << std::chrono::duration_cast<std::chrono::milliseconds>(last_silence_period).count() << "ms";
+    spdlog::trace("Starting election for silence period {}ms",std::chrono::duration_cast<std::chrono::milliseconds>(last_silence_period).count());
 
     assert(mWaitingCommand == nullptr);
     resetCommandsCounter();
@@ -96,9 +95,12 @@ ModbusExecutor::addPollList(const std::map<int, std::vector<std::shared_ptr<Regi
                 mWaitingCommand = reg;
                 mCurrentSlaveQueue = sit;
                 currentDiff = reg_delay;
-                BOOST_LOG_SEV(log, Log::trace) << "Electing next register to poll as " << mCurrentSlaveQueue->first << "." << mWaitingCommand->getRegister()
-                    << ", delay=" << std::chrono::duration_cast<std::chrono::milliseconds>(reg_delay).count() << "ms"
-                    << ", diff=" << std::chrono::duration_cast<std::chrono::milliseconds>(currentDiff).count() << "ms";
+                spdlog::trace("Electing next register to poll as {}.{}, delay={}ms, diff={}ms", \
+                    mCurrentSlaveQueue->first, \
+                    mWaitingCommand->getRegister(), \
+                    std::chrono::duration_cast<std::chrono::milliseconds>(reg_delay).count(), \
+                    std::chrono::duration_cast<std::chrono::milliseconds>(currentDiff).count() \
+                );
                 if (reg_delay.count() == 0)
                     break;
             }
@@ -110,7 +112,11 @@ ModbusExecutor::addPollList(const std::map<int, std::vector<std::shared_ptr<Regi
         mWaitingCommand = mCurrentSlaveQueue->second.popNext();
     }
 
-    BOOST_LOG_SEV(log, Log::trace) << "Next register to poll set to " << mCurrentSlaveQueue->first << "." << mWaitingCommand->getRegister() << ", commands_left=" << mCommandsLeft;
+    spdlog::trace("Next register to poll set to {}.{}, commands_left={}", \
+        mCurrentSlaveQueue->first, \
+        mWaitingCommand->getRegister(), \
+        mCommandsLeft \
+    );
 }
 
 
@@ -151,9 +157,13 @@ ModbusExecutor::pollRegisters(RegisterPoll& reg, bool forceSend) {
         reg.mLastReadOk = true;
 
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        BOOST_LOG_SEV(log, Log::trace) << "Register " << reg.mSlaveId << "." << reg.mRegister << " (0x" << std::hex << reg.mSlaveId << ".0x" << std::hex << reg.mRegister << ")"
-                        << " polled in "  << std::dec << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms";
-
+        spdlog::trace("Register {}.{} (0x{:x}.0x{:x}) polled in {}ms", \
+                            reg.mSlaveId, \
+                            reg.mRegister, \
+                            reg.mSlaveId, \
+                            reg.mRegister, \
+                            std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() \
+                        );
         if (reg.mPublishMode == PublishMode::EVERY_POLL)
             forceSend = true;
 
@@ -162,13 +172,18 @@ ModbusExecutor::pollRegisters(RegisterPoll& reg, bool forceSend) {
             sendMessage(QueueItem::create(val));
             reg.update(newValues);
             if (reg.mReadErrors != 0) {
-                BOOST_LOG_SEV(log, Log::debug) << "Register "
-                    << reg.mSlaveId << "." << reg.mRegister
-                    << " read ok after " << reg.mReadErrors << " error(s)";
+                spdlog::debug("Register {}.{} read ok after {} error(s)", \
+                        reg.mSlaveId, \
+                        reg.mRegister, \
+                        reg.mReadErrors \
+                );
             }
             reg.mReadErrors = 0;
-            BOOST_LOG_SEV(log, Log::trace) << "Register " << reg.mSlaveId << "." << reg.mRegister
-                << " values sent, data=" << DebugTools::registersToStr(reg.getValues());
+            spdlog::trace("Register {}.{} values sent, data={}", \
+                    reg.mSlaveId, \
+                    reg.mRegister, \
+                    DebugTools::registersToStr(reg.getValues()) \
+            );
         };
     } catch (const ModbusReadException& ex) {
         handleRegisterReadError(reg, ex.what());
@@ -187,8 +202,12 @@ ModbusExecutor::handleRegisterReadError(RegisterPoll& regPoll, const char* error
     regPoll.mLastReadOk = false;
 
     if (regPoll.mReadErrors == 1 || (std::chrono::steady_clock::now() - regPoll.mFirstErrorTime > RegisterPoll::DurationBetweenLogError)) {
-        BOOST_LOG_SEV(log, Log::error) << regPoll.mReadErrors << " error(s) when reading register "
-            << regPoll.mSlaveId << "." << regPoll.mRegister << ", last error: " << errorMessage;
+        spdlog::error("{} error(s) when reading register {}.{}, last error: {}", \
+                regPoll.mReadErrors, \
+                regPoll.mSlaveId, \
+                regPoll.mRegister, \
+                errorMessage \
+        );
         regPoll.mFirstErrorTime = std::chrono::steady_clock::now();
         if (regPoll.mReadErrors != 1)
             regPoll.mReadErrors = 0;
@@ -209,17 +228,25 @@ ModbusExecutor::writeRegisters(RegisterWrite& cmd) {
         cmd.mLastWriteOk = true;
 
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        BOOST_LOG_SEV(log, Log::debug) << "Register " << cmd.mSlaveId << "." << cmd.mRegister << " (0x" << std::hex << cmd.mSlaveId << ".0x" << std::hex << cmd.mRegister << ")"
-                        << " written in "  << std::dec << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms"
-                        << ", processing time "  << std::dec << std::chrono::duration_cast<std::chrono::milliseconds>(start - cmd.mCreationTime).count() << "ms";
-
+        spdlog::debug("Register {}.{} (0x{:x}.0x{:x}) written in {}ms, processing time {}ms", \
+                            cmd.mSlaveId, \
+                            cmd.mRegister, \
+                            cmd.mSlaveId, \
+                            cmd.mRegister, \
+                            std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count(), \
+                            std::chrono::duration_cast<std::chrono::milliseconds>(start - cmd.mCreationTime).count() \
+                        );
         if (cmd.mReturnMessage != nullptr) {
             cmd.mReturnMessage->mRegisters = ModbusRegisters(cmd.getValues());
             sendMessage(QueueItem::create(*cmd.mReturnMessage));
         }
     } catch (const ModbusWriteException& ex) {
-        BOOST_LOG_SEV(log, Log::error) << "error writing register "
-            << cmd.mSlaveId << "." << cmd.mRegister << ": " << ex.what();
+        spdlog::error("error writing register {}.{}: {}", \
+                cmd.mSlaveId, \
+                cmd.mRegister, \
+                ex.what() \
+        );
+            
         cmd.mLastWriteOk = false;
         MsgRegisterWriteFailed msg(cmd.mSlaveId, cmd.mRegisterType, cmd.mRegister, cmd.getCount());
         sendMessage(QueueItem::create(msg));
@@ -276,8 +303,12 @@ ModbusExecutor::executeNext() {
             std::chrono::steady_clock::duration delay_passed = std::chrono::steady_clock::now() - mLastCommandTime;
             std::chrono::steady_clock::duration delay_left = delay - delay_passed;
             if (delay_left > std::chrono::steady_clock::duration::zero()) {
-                BOOST_LOG_SEV(log, Log::trace) << "Command for " << mCurrentSlaveQueue->first << "." << mWaitingCommand->getRegister()
-                    << " need to wait " << std::chrono::duration_cast<std::chrono::milliseconds>(delay_left).count() << "ms";
+                spdlog::trace("Command for {}.{} need to wait {}ms", \
+                        mCurrentSlaveQueue->first, \
+                        mWaitingCommand->getRegister(), \
+                        std::chrono::duration_cast<std::chrono::milliseconds>(delay_left).count() \
+                );
+                    
                 return delay_left;
             }
         }
@@ -287,10 +318,12 @@ ModbusExecutor::executeNext() {
 
     if (mInitialPoll && pollDone()) {
         if (mCurrentSlaveQueue == mSlaveQueues.end()) {
-            BOOST_LOG_SEV(log, Log::info) << "Nothing to do for initial poll";
+            spdlog::info("Nothing to do for initial poll");
         } else {
             auto end = std::chrono::steady_clock::now();
-            BOOST_LOG_SEV(log, Log::info) << "Initial poll done in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - mInitialPollStart).count() << "ms";
+            spdlog::info("Initial poll done in {}ms", \
+                std::chrono::duration_cast<std::chrono::milliseconds>(end - mInitialPollStart).count() \
+            );
             mInitialPoll = false;
         }
     }

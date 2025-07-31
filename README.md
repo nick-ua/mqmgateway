@@ -55,6 +55,8 @@ Cameron Desrochers. See license terms in [LICENSE.md](readerwriterqueue/LICENSE.
    1. mosquitto
    1. yaml-cpp
    1. rapidJSON
+   1. spdlog
+   1. systemd (you can build without systemd support with -DWITH_SYSTEMD=0 )
    1. exprtk (optional, for exprtk expressions language support in yaml declarations)
    1. Catch2 (optional, for unit tests)
 

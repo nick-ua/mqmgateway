@@ -81,3 +81,7 @@ target_link_libraries(tests
     ${CMAKE_THREAD_LIBS_INIT}
     ${CMAKE_DL_LIBS}
 )
+
+if(SYSTEMD_FOUND  AND WITH_SYSTEMD)
+    target_link_libraries(modmqttsrv systemd)
+endif()

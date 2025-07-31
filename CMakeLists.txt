@@ -36,10 +36,22 @@ find_package(Threads)
 find_package(yaml-cpp REQUIRED)
 find_package(RapidJSON REQUIRED)
 
+add_compile_definitions(FMT_HEADER_ONLY)
+pkg_check_modules(SPDLOG REQUIRED spdlog)
+
+option(WITH_SYSTEMD "Enable systemd support" ON)
+
+if(WITH_SYSTEMD)
+    pkg_check_modules(SYSTEMD REQUIRED libsystemd)
+    if(SYSTEMD_FOUND)
+        add_compile_definitions(WITH_SYSTEMD)
+    endif()
+endif()
+
 find_path(EXPRTK_INCLUDE_DIR "exprtk.hpp")
 message(STATUS "EXPRTK_INCLUDE_DIR => ${EXPRTK_INCLUDE_DIR}")
 
-include_directories(${Boost_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIRS} .)
+include_directories(${Boost_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIRS} ${SPDLOG_INCLUDE_DIR} .)
 link_directories(${Boost_LIBRARY_DIRS})
 
 # force boost dynamic linking
