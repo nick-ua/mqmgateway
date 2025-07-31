@@ -110,7 +110,7 @@ MsgRegisterPollSpecification::merge(const MsgRegisterPoll& poll) {
             poll.mSlaveId, \
             poll.mRegister, \
             poll.mCount, \
-            poll.mRegisterType, \
+            static_cast<int>(poll.mRegisterType), \
             poll.mRefreshMsec.count(), \
             mNetworkName \
         );

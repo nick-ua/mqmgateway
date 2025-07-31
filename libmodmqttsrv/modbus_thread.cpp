@@ -94,7 +94,7 @@ ModbusThread::setPollSpecification(const MsgRegisterPollSpecification& spec) {
     for (auto sit = registerMap.begin(); sit != registerMap.end(); sit++) {
         for (auto it = sit->second.begin(); it != sit->second.end(); it++) {
             spdlog::debug("{}, slave {}, register {}:{}, count={}, poll every {}ms, queue {}, min f_delay {}ms, min delay {}ms",
-                mNetworkName, sit->first, (*it)->mRegister, (*it)->mRegisterType, (*it)->getCount(),
+                mNetworkName, sit->first, (*it)->mRegister, static_cast<int>((*it)->mRegisterType), (*it)->getCount(),
                 std::chrono::duration_cast<std::chrono::milliseconds>((*it)->mRefresh).count(),
                 ((*it)->mPublishMode == PublishMode::ON_CHANGE ? "on change" : "always"),
                 std::chrono::duration_cast<std::chrono::milliseconds>((*it)->getDelayBeforeFirstCommand()).count(),
