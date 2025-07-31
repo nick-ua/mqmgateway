@@ -7,25 +7,9 @@ if (WITHOUT_TESTS)
     set(build_unittests EXCLUDE_FROM_ALL)
 endif()
 
-# OLD until min boost version will be bumped to 1.70.x or higher 
-if (POLICY CMP0167)
-    cmake_policy(SET CMP0167 OLD)
-endif()
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
-# Uncomment to test with locally installed boost
-#set(Boost_NO_BOOST_CMAKE ON)
-#set(BOOST_NO_SYSTEM_PATHS ON)
-#set(BOOST_ROOT "/path/to/boost")
-
-find_package(Boost 1.54.0 COMPONENTS filesystem REQUIRED)
-set(Boost_USE_STATIC_LIBS        OFF)
-set(Boost_USE_MULTITHREADED      ON)
-set(Boost_USE_STATIC_RUNTIME     OFF)
-set(BOOST_ALL_DYN_LINK           ON) 
-
-message("Boost found at: ${Boost_INCLUDE_DIRS}")
 
 find_package(PkgConfig)
 pkg_check_modules(LIBMODBUS REQUIRED libmodbus)
@@ -51,11 +35,8 @@ endif()
 find_path(EXPRTK_INCLUDE_DIR "exprtk.hpp")
 message(STATUS "EXPRTK_INCLUDE_DIR => ${EXPRTK_INCLUDE_DIR}")
 
-include_directories(${Boost_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIRS} ${SPDLOG_INCLUDE_DIR} .)
-link_directories(${Boost_LIBRARY_DIRS})
+include_directories( ${YAML_CPP_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIRS} ${SPDLOG_INCLUDE_DIR} .)
 
-# force boost dynamic linking
-add_definitions(-DBOOST_LOG_DYN_LINK)
 
 add_subdirectory(libmodmqttconv)
 add_subdirectory(libmodmqttsrv)

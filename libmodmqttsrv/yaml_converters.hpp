@@ -2,8 +2,6 @@
 
 #include <chrono>
 #include <regex>
-#include <boost/tokenizer.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include <yaml-cpp/yaml.h>
 #include "libmodmqttsrv/exceptions.hpp"

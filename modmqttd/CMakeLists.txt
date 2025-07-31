@@ -10,7 +10,6 @@ target_link_libraries(modmqttd
     ${MOSQUITTO_LIBRARIES}
     yaml-cpp
     spdlog
-    ${Boost_LIBRARIES} 
     ${LIBMODBUS_LIBRARIES} 
     ${CMAKE_THREAD_LIBS_INIT}
 )
