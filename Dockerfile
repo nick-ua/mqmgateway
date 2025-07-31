@@ -1,7 +1,7 @@
 ARG ALPINE_VERSION=3.19
 FROM alpine:${ALPINE_VERSION} AS builder
 RUN apk update && apk add --no-cache \
-      git build-base cmake pkgconf libmodbus-dev mosquitto-dev yaml-cpp-dev rapidjson-dev catch2-3
+      git build-base cmake pkgconf libmodbus-dev mosquitto-dev yaml-cpp-dev rapidjson-dev catch2-3 spdlog-dev fmt-dev
 
 ARG EXPRTK_URL=https://github.com/ArashPartow/exprtk/raw/master/exprtk.hpp
 RUN if [ "${EXPRTK_URL-}" ]; then \
@@ -13,6 +13,7 @@ COPY . /opt/mqmgateway/source
 ARG MQM_TEST_SKIP
 RUN cmake \
       -DCMAKE_INSTALL_PREFIX:PATH=/opt/mqmgateway/install \
+      -DWITH_SYSTEMD=0 \
       ${MQM_TEST_SKIP:+-DWITHOUT_TESTS=1} \
       -S /opt/mqmgateway/source \
       -B /opt/mqmgateway/build
@@ -28,7 +29,7 @@ FROM alpine:${ALPINE_VERSION} AS runtime
 COPY --from=builder /opt/mqmgateway/install/ /usr/
 COPY --from=builder /opt/mqmgateway/source/modmqttd/config.template.yaml /etc/modmqttd/config.yaml
 RUN apk update && apk add --no-cache \
-  libmodbus mosquitto yaml-cpp && \
+  libmodbus mosquitto yaml-cpp fmt spdlog && \
   apk cache purge
 ENTRYPOINT [ "/usr/bin/modmqttd" ]
 CMD [ "--config", "/etc/modmqttd/config.yaml" ]
