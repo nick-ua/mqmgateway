@@ -20,6 +20,10 @@ find_package(Threads)
 find_package(yaml-cpp REQUIRED)
 find_package(RapidJSON REQUIRED)
 
+option(WITH_SPDLOG_FMT_EXTERNAL "Use spdlog with external fmt lib" OFF)
+if(WITH_SPDLOG_FMT_EXTERNAL)
+    add_definitions(-DSPDLOG_FMT_EXTERNAL=ON)
+endif()
 add_compile_definitions(FMT_HEADER_ONLY)
 pkg_check_modules(SPDLOG REQUIRED spdlog)
 
