@@ -35,7 +35,7 @@ endif()
 find_path(EXPRTK_INCLUDE_DIR "exprtk.hpp")
 message(STATUS "EXPRTK_INCLUDE_DIR => ${EXPRTK_INCLUDE_DIR}")
 
-include_directories( ${YAML_CPP_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIRS} ${SPDLOG_INCLUDE_DIR} ${FMT_INCLUDE_DIR}  .)
+include_directories( ${YAML_CPP_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIRS} ${SPDLOG_INCLUDE_DIR} .)
 
 
 add_subdirectory(libmodmqttconv)
