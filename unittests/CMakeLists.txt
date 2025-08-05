@@ -81,12 +81,10 @@ target_link_libraries(tests
     ${CMAKE_DL_LIBS}
 )
 
-if(SYSTEMD_FOUND  AND WITH_SYSTEMD)
+if(WITH_SYSTEMD)
     target_link_libraries(tests systemd)
 endif()
-
-if(WITH_SPDLOG_FMT_EXTERNAL)
+if(WITH_SPDLOG_FMT_EXTERNAL AND NOT WITH_FMT_HEADER_ONLY)
     target_link_libraries(tests fmt)
 endif()
-
 target_link_libraries(tests spdlog)

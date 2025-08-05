@@ -13,12 +13,10 @@ target_link_libraries(modmqttd
     ${CMAKE_THREAD_LIBS_INIT}
 )
 
-if(SYSTEMD_FOUND  AND WITH_SYSTEMD)
+if(WITH_SYSTEMD)
     target_link_libraries(modmqttd systemd)
 endif()
-
-if(WITH_SPDLOG_FMT_EXTERNAL)
+if(WITH_SPDLOG_FMT_EXTERNAL AND NOT WITH_FMT_HEADER_ONLY)
     target_link_libraries(modmqttd fmt)
 endif()
-
 target_link_libraries(modmqttd spdlog)
