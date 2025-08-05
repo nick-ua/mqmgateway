@@ -20,12 +20,13 @@ find_package(Threads)
 find_package(yaml-cpp REQUIRED)
 find_package(RapidJSON REQUIRED)
 
-option(WITH_SPDLOG_FMT_EXTERNAL "Use spdlog with external fmt lib" OFF)
+option(WITH_SPDLOG_FMT_EXTERNAL "Use spdlog with external fmt lib" ON)
 if(WITH_SPDLOG_FMT_EXTERNAL)
-    add_definitions(-DSPDLOG_FMT_EXTERNAL=ON)
+    find_package(fmt REQUIRED)
+else()
+    add_compile_definitions(FMT_HEADER_ONLY)
 endif()
-add_compile_definitions(FMT_HEADER_ONLY)
-pkg_check_modules(SPDLOG REQUIRED spdlog)
+find_package(spdlog REQUIRED)
 
 option(WITH_SYSTEMD "Enable systemd support" ON)
 
@@ -77,6 +78,8 @@ endif()
 install (TARGETS modmqttd DESTINATION bin)
 
 install (TARGETS modmqttsrv DESTINATION lib)
+
+
 install (DIRECTORY "${PROJECT_SOURCE_DIR}/libmodmqttconv" DESTINATION include FILES_MATCHING PATTERN "*.hpp")
 
 install(TARGETS stdconv DESTINATION lib/modmqttd)

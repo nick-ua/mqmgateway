@@ -9,7 +9,6 @@ target_link_libraries(modmqttd
     modmqttsrv
     ${MOSQUITTO_LIBRARIES}
     yaml-cpp
-    spdlog
     ${LIBMODBUS_LIBRARIES} 
     ${CMAKE_THREAD_LIBS_INIT}
 )
@@ -17,3 +16,9 @@ target_link_libraries(modmqttd
 if(SYSTEMD_FOUND  AND WITH_SYSTEMD)
     target_link_libraries(modmqttd systemd)
 endif()
+
+if(WITH_SPDLOG_FMT_EXTERNAL)
+    target_link_libraries(modmqttd fmt)
+endif()
+
+target_link_libraries(modmqttd spdlog)

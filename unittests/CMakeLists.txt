@@ -82,5 +82,11 @@ target_link_libraries(tests
 )
 
 if(SYSTEMD_FOUND  AND WITH_SYSTEMD)
-    target_link_libraries(modmqttsrv systemd)
+    target_link_libraries(tests systemd)
 endif()
+
+if(WITH_SPDLOG_FMT_EXTERNAL)
+    target_link_libraries(tests fmt)
+endif()
+
+target_link_libraries(tests spdlog)
