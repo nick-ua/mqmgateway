@@ -44,6 +44,8 @@ class ModMqtt {
         void setMqttImplementation(const std::shared_ptr<IMqttImpl>& impl);
         ~ModMqtt();
     private:
+        std::shared_ptr<spdlog::logger>_logger;
+
         struct ModbusInitData {
             std::vector<MsgRegisterPollSpecification> mPollSpecification;
 

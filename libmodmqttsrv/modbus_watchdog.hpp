@@ -10,7 +10,7 @@ namespace modmqttd {
 
 class ModbusWatchdog {
     public:
-        void init(const ModbusWatchdogConfig& conf);
+        void init(const ModbusWatchdogConfig& conf, std::shared_ptr<spdlog::logger>& logger);
 
         void inspectCommand(const RegisterCommand& command);
         void reset();
@@ -23,6 +23,8 @@ class ModbusWatchdog {
         }
 
     private:
+        std::shared_ptr<spdlog::logger>_logger;
+
         static constexpr std::chrono::milliseconds sDeviceCheckPeriod = std::chrono::milliseconds(300);
 
         ModbusWatchdogConfig mConfig;

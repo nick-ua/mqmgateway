@@ -221,7 +221,7 @@ MockedModbusContext::readModbusRegisters(int slaveId, const modmqttd::RegisterPo
 
 
     if (mInternalOperation)
-        spdlog::info("TEST: modbus {}.{}.{} READ: {}", mNetworkName, it->second.mId, regData.mRegister, modmqttd::DebugTools::registersToStr(ret));
+        _logger->info("TEST: modbus {}.{}.{} READ: {}", mNetworkName, it->second.mId, regData.mRegister, modmqttd::DebugTools::registersToStr(ret));
 
     mInternalOperation = false;
     mLastPollTime = std::chrono::steady_clock::now();
@@ -231,7 +231,7 @@ MockedModbusContext::readModbusRegisters(int slaveId, const modmqttd::RegisterPo
 }
 
 void
-MockedModbusContext::init(const modmqttd::ModbusNetworkConfig& config) {
+MockedModbusContext::init(const modmqttd::ModbusNetworkConfig& config, std::shared_ptr<spdlog::logger>& logger) {
     mNetworkName = config.mName;
     std::string fname = std::string("_") + mNetworkName;
     if (config.mType == modmqttd::ModbusNetworkConfig::Type::RTU)
@@ -271,7 +271,7 @@ MockedModbusContext::writeModbusRegisters(int pSlaveId, const modmqttd::Register
     std::map<int, Slave>::iterator it = findOrCreateSlave(pSlaveId);
 
     if (mInternalOperation)            
-        spdlog::info("TEST: modbus: {}.{}.{} WRITE: {}", \
+        _logger->info("TEST: modbus: {}.{}.{} WRITE: {}", \
                 mNetworkName, \
                 it->second.mId, \
                 msg.mRegister, \
@@ -322,7 +322,7 @@ MockedModbusContext::getModbusRegisterValue(int slaveId, int regNum, modmqttd::R
 uint16_t
 MockedModbusContext::waitForModbusValue(int slaveId, int regNum, modmqttd::RegisterType regType, uint16_t val, std::chrono::milliseconds timeout) {
    
-    spdlog::info("TEST: Waiting {}ms for value {} in register {}.{}, type={}", \
+    _logger->info("TEST: Waiting {}ms for value {} in register {}.{}, type={}", \
         timeout.count(), \
         val, \
         slaveId, \
@@ -352,7 +352,7 @@ MockedModbusContext::waitForModbusValue(int slaveId, int regNum, modmqttd::Regis
 
 void
 MockedModbusContext::waitForInitialPoll(std::chrono::milliseconds timeout) {
-    spdlog::info("TEST: Waiting {}ms for initialPoll", timeout.count());
+    _logger->info("TEST: Waiting {}ms for initialPoll", timeout.count());
     std::mutex m;
     std::unique_lock<std::mutex> lck(m);
 
@@ -372,7 +372,7 @@ MockedModbusContext::waitForInitialPoll(std::chrono::milliseconds timeout) {
         } while (dur < timeout.count());
     }
     if (unreadedRegisters != 0)
-        spdlog::error("TEST: Not all registers were read in {}ms", timeout.count() );
+        _logger->error("TEST: Not all registers were read in {}ms", timeout.count() );
     REQUIRE(unreadedRegisters == 0);
 }
 

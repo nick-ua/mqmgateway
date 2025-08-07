@@ -36,7 +36,7 @@ ModbusExecutor::sendMessage(const QueueItem& item) {
 void
 ModbusExecutor::setupInitialPoll(const std::map<int, std::vector<std::shared_ptr<RegisterPoll>>>& pRegisters) {
     addPollList(pRegisters, true);
-    spdlog::debug("starting initial poll");
+    _logger->debug("starting initial poll");
 }
 
 
@@ -47,7 +47,7 @@ ModbusExecutor::addPollList(const std::map<int, std::vector<std::shared_ptr<Regi
 
     if (mInitialPoll) {
         if (!pollDone()) {
-            spdlog::error("Cannot add next registers before initial poll is finished. Fix control loop.");
+            _logger->error("Cannot add next registers before initial poll is finished. Fix control loop.");
             return;
         }
     }
@@ -77,7 +77,7 @@ ModbusExecutor::addPollList(const std::map<int, std::vector<std::shared_ptr<Regi
     // and find the best one that fits in the last_silence_period
     auto last_silence_period = std::chrono::steady_clock::now() - mLastCommandTime;
 
-    spdlog::trace("Starting election for silence period {}ms",std::chrono::duration_cast<std::chrono::milliseconds>(last_silence_period).count());
+    _logger->trace("Starting election for silence period {}ms",std::chrono::duration_cast<std::chrono::milliseconds>(last_silence_period).count());
 
     assert(mWaitingCommand == nullptr);
     resetCommandsCounter();
@@ -95,7 +95,7 @@ ModbusExecutor::addPollList(const std::map<int, std::vector<std::shared_ptr<Regi
                 mWaitingCommand = reg;
                 mCurrentSlaveQueue = sit;
                 currentDiff = reg_delay;
-                spdlog::trace("Electing next register to poll as {}.{}, delay={}ms, diff={}ms", \
+                _logger->trace("Electing next register to poll as {}.{}, delay={}ms, diff={}ms", \
                     mCurrentSlaveQueue->first, \
                     mWaitingCommand->getRegister(), \
                     std::chrono::duration_cast<std::chrono::milliseconds>(reg_delay).count(), \
@@ -112,7 +112,7 @@ ModbusExecutor::addPollList(const std::map<int, std::vector<std::shared_ptr<Regi
         mWaitingCommand = mCurrentSlaveQueue->second.popNext();
     }
 
-    spdlog::trace("Next register to poll set to {}.{}, commands_left={}", \
+    _logger->trace("Next register to poll set to {}.{}, commands_left={}", \
         mCurrentSlaveQueue->first, \
         mWaitingCommand->getRegister(), \
         mCommandsLeft \
@@ -157,7 +157,7 @@ ModbusExecutor::pollRegisters(RegisterPoll& reg, bool forceSend) {
         reg.mLastReadOk = true;
 
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        spdlog::trace("Register {}.{} (0x{:x}.0x{:x}) polled in {}ms", \
+        _logger->trace("Register {}.{} (0x{:x}.0x{:x}) polled in {}ms", \
                             reg.mSlaveId, \
                             reg.mRegister, \
                             reg.mSlaveId, \
@@ -172,14 +172,14 @@ ModbusExecutor::pollRegisters(RegisterPoll& reg, bool forceSend) {
             sendMessage(QueueItem::create(val));
             reg.update(newValues);
             if (reg.mReadErrors != 0) {
-                spdlog::debug("Register {}.{} read ok after {} error(s)", \
+                _logger->debug("Register {}.{} read ok after {} error(s)", \
                         reg.mSlaveId, \
                         reg.mRegister, \
                         reg.mReadErrors \
                 );
             }
             reg.mReadErrors = 0;
-            spdlog::trace("Register {}.{} values sent, data={}", \
+            _logger->trace("Register {}.{} values sent, data={}", \
                     reg.mSlaveId, \
                     reg.mRegister, \
                     DebugTools::registersToStr(reg.getValues()) \
@@ -202,7 +202,7 @@ ModbusExecutor::handleRegisterReadError(RegisterPoll& regPoll, const char* error
     regPoll.mLastReadOk = false;
 
     if (regPoll.mReadErrors == 1 || (std::chrono::steady_clock::now() - regPoll.mFirstErrorTime > RegisterPoll::DurationBetweenLogError)) {
-        spdlog::error("{} error(s) when reading register {}.{}, last error: {}", \
+        _logger->error("{} error(s) when reading register {}.{}, last error: {}", \
                 regPoll.mReadErrors, \
                 regPoll.mSlaveId, \
                 regPoll.mRegister, \
@@ -228,7 +228,7 @@ ModbusExecutor::writeRegisters(RegisterWrite& cmd) {
         cmd.mLastWriteOk = true;
 
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        spdlog::debug("Register {}.{} (0x{:x}.0x{:x}) written in {}ms, processing time {}ms", \
+        _logger->debug("Register {}.{} (0x{:x}.0x{:x}) written in {}ms, processing time {}ms", \
                             cmd.mSlaveId, \
                             cmd.mRegister, \
                             cmd.mSlaveId, \
@@ -241,7 +241,7 @@ ModbusExecutor::writeRegisters(RegisterWrite& cmd) {
             sendMessage(QueueItem::create(*cmd.mReturnMessage));
         }
     } catch (const ModbusWriteException& ex) {
-        spdlog::error("error writing register {}.{}: {}", \
+        _logger->error("error writing register {}.{}: {}", \
                 cmd.mSlaveId, \
                 cmd.mRegister, \
                 ex.what() \
@@ -303,7 +303,7 @@ ModbusExecutor::executeNext() {
             std::chrono::steady_clock::duration delay_passed = std::chrono::steady_clock::now() - mLastCommandTime;
             std::chrono::steady_clock::duration delay_left = delay - delay_passed;
             if (delay_left > std::chrono::steady_clock::duration::zero()) {
-                spdlog::trace("Command for {}.{} need to wait {}ms", \
+                _logger->trace("Command for {}.{} need to wait {}ms", \
                         mCurrentSlaveQueue->first, \
                         mWaitingCommand->getRegister(), \
                         std::chrono::duration_cast<std::chrono::milliseconds>(delay_left).count() \
@@ -318,10 +318,10 @@ ModbusExecutor::executeNext() {
 
     if (mInitialPoll && pollDone()) {
         if (mCurrentSlaveQueue == mSlaveQueues.end()) {
-            spdlog::info("Nothing to do for initial poll");
+            _logger->info("Nothing to do for initial poll");
         } else {
             auto end = std::chrono::steady_clock::now();
-            spdlog::info("Initial poll done in {}ms", \
+            _logger->info("Initial poll done in {}ms", \
                 std::chrono::duration_cast<std::chrono::milliseconds>(end - mInitialPollStart).count() \
             );
             mInitialPoll = false;

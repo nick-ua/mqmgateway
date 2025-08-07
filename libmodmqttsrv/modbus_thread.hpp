@@ -22,6 +22,8 @@ class ModbusThread {
             moodycamel::BlockingReaderWriterQueue<QueueItem>& fromModbusQueue);
         void run();
     private:
+        std::shared_ptr<spdlog::logger>_logger;
+
         moodycamel::BlockingReaderWriterQueue<QueueItem>& mToModbusQueue;
         moodycamel::BlockingReaderWriterQueue<QueueItem>& mFromModbusQueue;
 

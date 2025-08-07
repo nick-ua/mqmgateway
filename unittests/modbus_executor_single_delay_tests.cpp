@@ -11,6 +11,7 @@
 #include "modbus_utils.hpp"
 #include "mockedmodbuscontext.hpp"
 #include "../readerwriterqueue/readerwriterqueue.h"
+#include "libmodmqttsrv/logging.hpp"
 
 TEST_CASE("ModbusExecutor for first delay config") {
     moodycamel::BlockingReaderWriterQueue<modmqttd::QueueItem> fromModbusQueue;
@@ -18,7 +19,9 @@ TEST_CASE("ModbusExecutor for first delay config") {
     MockedModbusFactory modbus_factory;
 
     modmqttd::ModbusExecutor executor(fromModbusQueue, toModbusQueue);
-    executor.init(modbus_factory.getContext("test"));
+    std::shared_ptr<spdlog::logger>_logger; 
+    _logger = modmqttd::Log::new_logger("test"); 
+    executor.init(modbus_factory.getContext("test"),_logger);
 
     ModbusExecutorTestRegisters registers;
     std::chrono::steady_clock::duration waitTime;

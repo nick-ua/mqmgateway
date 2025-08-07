@@ -61,10 +61,11 @@ class MockedModbusContext : public modmqttd::IModbusContext {
         };
 
         MockedModbusContext() {
+            _logger = modmqttd::Log::new_logger("MockedModbusContext"); 
             mCondition.reset(new std::condition_variable());
         }
 
-        virtual void init(const modmqttd::ModbusNetworkConfig& config);
+        virtual void init(const modmqttd::ModbusNetworkConfig& config, std::shared_ptr<spdlog::logger>& logger);
         virtual void connect();
         virtual bool isConnected() const;
         virtual void disconnect();
@@ -104,6 +105,8 @@ class MockedModbusContext : public modmqttd::IModbusContext {
             std::remove(mDeviceName.c_str());
         }
     private:
+        std::shared_ptr<spdlog::logger>_logger;
+
         std::mutex mMutex;
         std::shared_ptr<std::condition_variable> mCondition;
         std::map<int, Slave> mSlaves;

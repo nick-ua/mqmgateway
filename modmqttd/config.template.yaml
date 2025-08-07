@@ -136,10 +136,10 @@ mqtt:
         register_type: input
         refresh: 1s
 
-    - topic: exprtk/value
-      state:
-        # math expression on two registers, result with precision=2
-        converter: expr.evaluate("(R1 + R2*100)/2", 2)
-        register: rtutest.1.2
-        count: 2
-        register_type: input
+    # - topic: exprtk/value
+    #   state:
+    #     # math expression on two registers, result with precision=2
+    #     converter: expr.evaluate("(R1 + R2*100)/2", 2)
+    #     register: rtutest.1.2
+    #     count: 2
+    #     register_type: input

@@ -18,7 +18,7 @@ class ModbusExecutor {
             moodycamel::BlockingReaderWriterQueue<QueueItem>& fromModbusQueue,
             moodycamel::BlockingReaderWriterQueue<QueueItem>& toModbusQueue
         );
-        void init(const std::shared_ptr<IModbusContext>& modbus) { mModbus = modbus; }
+        void init(const std::shared_ptr<IModbusContext>& modbus, std::shared_ptr<spdlog::logger>& logger) { mModbus = modbus; _logger = logger; }
         void setupInitialPoll(const std::map<int, std::vector<std::shared_ptr<RegisterPoll>>>& pRegisters);
         bool allDone() const;
         bool pollDone() const;
@@ -49,6 +49,8 @@ class ModbusExecutor {
         const std::shared_ptr<RegisterCommand>& getLastCommand() const { return mLastCommand; }
 
     private:
+        std::shared_ptr<spdlog::logger>_logger;
+
         std::shared_ptr<IModbusContext> mModbus;
         moodycamel::BlockingReaderWriterQueue<QueueItem>& mFromModbusQueue;
         moodycamel::BlockingReaderWriterQueue<QueueItem>& mToModbusQueue;

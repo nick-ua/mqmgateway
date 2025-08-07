@@ -9,14 +9,15 @@ constexpr std::chrono::milliseconds ModbusWatchdog::sDeviceCheckPeriod;
 #endif
 
 void
-ModbusWatchdog::init(const ModbusWatchdogConfig& conf) {
+ModbusWatchdog::init(const ModbusWatchdogConfig& conf, std::shared_ptr<spdlog::logger>& logger) {
+    _logger = logger;
     mConfig = conf;
     reset();
-    spdlog::debug("Watchdog initialized. Watch period set to {}s", \
+    _logger->debug("Watchdog initialized. Watch period set to {}s", \
             std::chrono::duration_cast<std::chrono::seconds>(mConfig.mWatchPeriod).count() \
     );
     if (!mConfig.mDevicePath.empty()) {
-        spdlog::debug("Monitoring {} existence", \
+        _logger->debug("Monitoring {} existence", \
             mConfig.mDevicePath \
         );
     }
@@ -37,7 +38,7 @@ ModbusWatchdog::inspectCommand(const RegisterCommand& command) {
                 mDeviceRemoved = !std::filesystem::exists(mConfig.mDevicePath.c_str());
                 mLastDeviceCheckTime = now;
                 if (mDeviceRemoved) {
-                    spdlog::warn("Detected device {} removal", \
+                    _logger->warn("Detected device {} removal", \
                         mConfig.mDevicePath \
                     );
                 }
@@ -55,7 +56,7 @@ ModbusWatchdog::isReconnectRequired() const {
         return true;
 
     auto error_p = getCurrentErrorPeriod();
-    spdlog::trace("Watchdog: current error period is {}ms", \
+    _logger->trace("Watchdog: current error period is {}ms", \
             std::chrono::duration_cast<std::chrono::milliseconds>(error_p).count() \
     );
     return error_p > mConfig.mWatchPeriod;

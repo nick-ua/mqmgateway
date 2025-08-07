@@ -92,12 +92,13 @@ Mosquitto::libCleanup() {
 }
 
 Mosquitto::Mosquitto() {
+    _logger = Log::new_logger("mosquitto");
 	mMosq = mosquitto_new(NULL, true, this);
 }
 
 void
 Mosquitto::connect(const MqttBrokerConfig& config) {
-    spdlog::info("Connecting to {}:{}", config.mHost, config.mPort);
+    _logger->info("Connecting to {}:{}", config.mHost, config.mPort);
 
     int rc = 0;
     if (!config.mUsername.empty()) {
@@ -126,7 +127,7 @@ Mosquitto::connect(const MqttBrokerConfig& config) {
     }
 
     if (rc != MOSQ_ERR_SUCCESS) {
-        spdlog::error("Error connecting to mqtt broker: {}", returnCodeToStr(rc));
+        _logger->error("Error connecting to mqtt broker: {}", returnCodeToStr(rc));
         
     } else {
         mosquitto_reconnect_delay_set(mMosq, 3,60, true);
@@ -140,10 +141,10 @@ Mosquitto::connect(const MqttBrokerConfig& config) {
         mosquitto_log_callback_set(mMosq, on_log_wrapper);
 
 
-        spdlog::debug("Waiting for connection event");
+        _logger->debug("Waiting for connection event");
         int rc = mosquitto_loop_start(mMosq);
         if (rc != MOSQ_ERR_SUCCESS) {
-            spdlog::error("Error processing network traffic: {}", returnCodeToStr(rc));
+            _logger->error("Error processing network traffic: {}", returnCodeToStr(rc));
         }
     }
 }
@@ -184,13 +185,13 @@ Mosquitto::publish(const char* topic, int len, const void* data, bool retain) {
 
 void
 Mosquitto::on_disconnect(int rc) {
-    spdlog::info("Disconnected from mqtt broker, code: {}", returnCodeToStr(rc));
+    _logger->info("Disconnected from mqtt broker, code: {}", returnCodeToStr(rc));
     mOwner->onDisconnect();
 }
 
 void
 Mosquitto::on_connect(int rc) {
-    spdlog::info("Connection established"); 
+    _logger->info("Connection established"); 
     mOwner->onConnect();
 }
 
@@ -198,19 +199,19 @@ void
 Mosquitto::on_log(int level, const char* message) {
     switch(level) {
         case MOSQ_LOG_INFO:
-            spdlog::info("{}", message);
+            _logger->info("{}", message);
         break;
         case MOSQ_LOG_NOTICE:
-            spdlog::info("{}", message);
+            _logger->info("{}", message);
         break;
         case MOSQ_LOG_WARNING:
-            spdlog::warn("{}", message);
+            _logger->warn("{}", message);
         break;
         case  MOSQ_LOG_ERR:
-            spdlog::error("{}", message);
+            _logger->error("{}", message);
         break;
         case MOSQ_LOG_DEBUG:
-            spdlog::debug("{}", message);
+            _logger->debug("{}", message);
         break;
     }
 }

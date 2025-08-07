@@ -8,8 +8,10 @@
 #ifdef WITH_SYSTEMD
 #include "spdlog/sinks/systemd_sink.h"
 #endif
+#include "spdlog/sinks/stdout_sinks.h"
+#include "spdlog/sinks/stdout_color_sinks.h" // Example sink
 #include "logging.hpp"
-
+#include <memory> 
 
 namespace modmqttd {
 
@@ -62,10 +64,21 @@ void Log::init_logging(severity level) {
             spdlog::set_level(spdlog::level::off);
             return;
         }
-#ifdef WITH_SYSTEMD
-    bool log_timestamp = true;
+#ifdef WITH_SYSTEMD    
+    if (isRunningUnderSystemd()){
+        auto logger = spdlog::systemd_logger_mt("mqmgateway::main");
+        spdlog::set_default_logger(logger);
+    }
+    else
+#endif
+    {
+        auto logger = spdlog::stdout_color_mt("mqmgateway::main");
+        spdlog::set_default_logger(logger);
+    }
+}
 
-    //check JOURNAL_STREAM indoe vs stderr inode
+bool Log::isRunningUnderSystemd(){
+        //check JOURNAL_STREAM indoe vs stderr inode
     const char* js = std::getenv("JOURNAL_STREAM");
     if (js != nullptr) {
         std::string jstr(js);
@@ -79,18 +92,29 @@ void Log::init_logging(severity level) {
                 if (ret >= 0) {
                     inode = file_stat.st_ino;
                     if (std::to_string(inode) == env_inode)
-                        log_timestamp = false;
+                        return true;
                 }
             };
         }
     }
-    
-    if (!log_timestamp){
-        auto systemd_sink = std::make_shared<spdlog::sinks::systemd_sink_mt>();
-        auto logger = std::make_shared<spdlog::logger>("modmqttd", systemd_sink);
-        spdlog::set_default_logger(logger);
+    return false;
+}
+
+std::shared_ptr<spdlog::logger>  Log::new_logger(const std::string name){
+    std::string logger_name = "mqmgateway::" + name;
+    auto logger = spdlog::get(logger_name);
+    if(logger != nullptr){
+        return logger;
     }
-#endif
+    #ifdef WITH_SYSTEMD
+    if(isRunningUnderSystemd()){
+        return spdlog::systemd_logger_mt(logger_name);
+    }
+    else
+    #endif
+    {
+        return spdlog::stdout_color_mt(logger_name);
+    }
 }
 
 }

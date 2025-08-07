@@ -19,7 +19,9 @@ TEST_CASE("ModbusExecutor") {
     MockedModbusFactory modbus_factory;
 
     modmqttd::ModbusExecutor executor(fromModbusQueue, toModbusQueue);
-    executor.init(modbus_factory.getContext("test"));
+    std::shared_ptr<spdlog::logger>_logger; 
+    _logger = modmqttd::Log::new_logger("test"); 
+    executor.init(modbus_factory.getContext("test"),_logger);
 
     ModbusExecutorTestRegisters registers;
     std::chrono::steady_clock::duration waitTime;

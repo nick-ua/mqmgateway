@@ -16,7 +16,7 @@ class MsgRegisterValues;
 */
 class IModbusContext {
     public:
-        virtual void init(const ModbusNetworkConfig& config) = 0;
+        virtual void init(const ModbusNetworkConfig& config, std::shared_ptr<spdlog::logger>& logger) = 0;
         virtual void connect() = 0;
         virtual bool isConnected() const = 0;
         virtual void disconnect() = 0;

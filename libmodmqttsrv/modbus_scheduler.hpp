@@ -13,6 +13,7 @@ namespace modmqttd {
 
     class ModbusScheduler {
         public:
+            void init(std::shared_ptr<spdlog::logger>& logger) { _logger = logger; };
             void setPollSpecification(const std::map<int, std::vector<std::shared_ptr<RegisterPoll>>>& pRegisterMap) {
                 mRegisterMap = pRegisterMap;
             }
@@ -34,6 +35,8 @@ namespace modmqttd {
                 const std::chrono::time_point<std::chrono::steady_clock>& timePoint
             );
         private:
+            std::shared_ptr<spdlog::logger>_logger;
+
             std::map<int, std::vector<std::shared_ptr<RegisterPoll>>> mRegisterMap;
     };
 }

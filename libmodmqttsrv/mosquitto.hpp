@@ -33,6 +33,8 @@ class Mosquitto : public IMqttImpl {
         virtual void on_message(const struct mosquitto_message *message);
         virtual ~Mosquitto();
     private:
+        std::shared_ptr<spdlog::logger>_logger;
+        
         mosquitto *mMosq = NULL;
         MqttClient* mOwner;
 

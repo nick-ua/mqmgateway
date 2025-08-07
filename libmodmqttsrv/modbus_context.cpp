@@ -1,17 +1,17 @@
 
 #include "modbus_context.hpp"
 #include "register_poll.hpp"
-#include "spdlog/spdlog.h"
 
 namespace modmqttd {
 
 void
-ModbusContext::init(const ModbusNetworkConfig& config)
+ModbusContext::init(const ModbusNetworkConfig& config,  std::shared_ptr<spdlog::logger>& logger)
 {
+    _logger = logger; 
     mNetworkType = config.mType;
     if (mNetworkType == ModbusNetworkConfig::TCPIP) {
         mNetworkAddress = config.mAddress;
-        spdlog::info("Connecting to {} - {}",mNetworkAddress,config.mPort);
+        _logger->info("Connecting to {} - {}",mNetworkAddress,config.mPort);
         mCtx = modbus_new_tcp(config.mAddress.c_str(), config.mPort);
         modbus_set_error_recovery(mCtx,
             (modbus_error_recovery_mode)
@@ -19,7 +19,7 @@ ModbusContext::init(const ModbusNetworkConfig& config)
         );
     } else {
         mNetworkAddress = config.mDevice;
-        spdlog::info("Creating RTU context: {}, {}-{}{}{}",config.mDevice,config.mBaud,config.mDataBit,config.mParity,config.mStopBit);
+        _logger->info("Creating RTU context: {}, {}-{}{}{}",config.mDevice,config.mBaud,config.mDataBit,config.mParity,config.mStopBit);
         mCtx = modbus_new_rtu(
             config.mDevice.c_str(),
             config.mBaud,
@@ -49,7 +49,7 @@ ModbusContext::init(const ModbusNetworkConfig& config)
             if (modbus_rtu_set_serial_mode(mCtx, serialMode)) {
                 throw ModbusContextException("Unable to set RTU serial mode");
             }
-            spdlog::info("RTU serial mode set to {}",serialModeStr);
+            _logger->info("RTU serial mode set to {}",serialModeStr);
         }
 
         int rtsMode;
@@ -72,14 +72,14 @@ ModbusContext::init(const ModbusNetworkConfig& config)
             if (modbus_rtu_set_rts(mCtx, rtsMode)) {
                 throw ModbusContextException("Unable to set RTS mode");
             }
-            spdlog::info("RTU RTS mode set to {}",rtsModeStr);
+            _logger->info("RTU RTS mode set to {}",rtsModeStr);
         }
 
         if (config.mRtsDelayUs > 0) {
             if (modbus_rtu_set_rts_delay(mCtx, config.mRtsDelayUs)) {
                 throw ModbusContextException("Unable to set RTS delay");
             }
-            spdlog::info("RTU delay set to {}us",config.mRtsDelayUs);
+            _logger->info("RTU delay set to {}us",config.mRtsDelayUs);
         }
     }
 
@@ -87,14 +87,14 @@ ModbusContext::init(const ModbusNetworkConfig& config)
     if (modbus_set_response_timeout(mCtx, 0, us)) {
         throw ModbusContextException("Unable to set response timeout");
     }
-    spdlog::info("Response timeout set to {}ms",config.mResponseTimeout.count());
+    _logger->info("Response timeout set to {}ms",config.mResponseTimeout.count());
 
     if (config.mResponseDataTimeout.count() > 0) {
         us = std::chrono::duration_cast<std::chrono::microseconds>(config.mResponseDataTimeout).count();
         if (modbus_set_byte_timeout(mCtx, 0, us)) {
             throw ModbusContextException("Unable to set response data timeout");
         }
-        spdlog::info("Response data timeout set to {}ms",config.mResponseDataTimeout.count());
+        _logger->info("Response data timeout set to {}ms",config.mResponseDataTimeout.count());
     }
 
 
@@ -110,10 +110,10 @@ ModbusContext::connect() {
     if (modbus_connect(mCtx) == -1) {
         switch(mNetworkType) {
             case ModbusNetworkConfig::Type::TCPIP:
-                spdlog::error("modbus: connection to {} failed({}) : {}",mNetworkAddress,errno,modbus_strerror(errno));
+                _logger->error("modbus: connection to {} failed({}) : {}",mNetworkAddress,errno,modbus_strerror(errno));
             break;
             case ModbusNetworkConfig::Type::RTU:
-                spdlog::error("modbus: cannot open {} ({}) : {}",mNetworkAddress,errno,modbus_strerror(errno));
+                _logger->error("modbus: cannot open {} ({}) : {}",mNetworkAddress,errno,modbus_strerror(errno));
             break;
         }
         mIsConnected = false;

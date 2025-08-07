@@ -13,7 +13,7 @@ ModbusScheduler::getRegistersToPoll(
 ) {
     std::map<int, std::vector<std::shared_ptr<RegisterPoll>>> ret;
 
-    //spdlog::trace("initial outduration {}",std::chrono::duration_cast<std::chrono::milliseconds>(outDuration).count()); 
+    //_logger->trace("initial outduration {}",std::chrono::duration_cast<std::chrono::milliseconds>(outDuration).count()); 
 
     outDuration = std::chrono::steady_clock::duration::max();
     for(std::map<int, std::vector<std::shared_ptr<RegisterPoll>>>::const_iterator slave = mRegisterMap.begin();
@@ -27,10 +27,10 @@ ModbusScheduler::getRegistersToPoll(
             auto time_passed = timePoint - reg.mLastRead;
             auto time_to_poll = reg.mRefresh;
 
-            //spdlog::trace("time passed:  {}",std::chrono::duration_cast<std::chrono::milliseconds>(time_to_poll).count()); 
+            //_logger->trace("time passed:  {}",std::chrono::duration_cast<std::chrono::milliseconds>(time_to_poll).count()); 
 
             if (time_passed >= reg.mRefresh) {
-                spdlog::trace("Register {}.{} (0x{:x}.0x{:x}) added, last read {}ms ago", \
+                _logger->trace("Register {}.{} (0x{:x}.0x{:x}) added, last read {}ms ago", \
                     slave->first, \
                     reg.mRegister, \
                     slave->first, \
@@ -44,7 +44,7 @@ ModbusScheduler::getRegistersToPoll(
 
             if (outDuration > time_to_poll) {
                 outDuration = time_to_poll;
-                spdlog::trace("Wait duration set to {}ms as next poll for register {}.{} (0x{:x}.0x{:x})", \
+                _logger->trace("Wait duration set to {}ms as next poll for register {}.{} (0x{:x}.0x{:x})", \
                                     std::chrono::duration_cast<std::chrono::milliseconds>(time_to_poll).count(), \
                                     slave->first, \
                                     reg.mRegister, \

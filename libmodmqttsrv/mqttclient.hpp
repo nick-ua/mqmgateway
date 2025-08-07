@@ -55,6 +55,8 @@ class MqttClient {
         //for unit tests
         void setMqttImplementation(const std::shared_ptr<IMqttImpl>& impl) { mMqttImpl = impl; }
     private:
+        std::shared_ptr<spdlog::logger>_logger;
+
         std::shared_ptr<IMqttImpl> mMqttImpl;
 
         void subscribeToCommandTopic(const std::string& objectName, const MqttObjectCommand& cmd);

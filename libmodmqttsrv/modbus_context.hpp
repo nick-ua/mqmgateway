@@ -13,7 +13,7 @@ namespace modmqttd {
  * */
 class ModbusContext : public IModbusContext {
     public:
-        virtual void init(const ModbusNetworkConfig& config);
+        virtual void init(const ModbusNetworkConfig& config, std::shared_ptr<spdlog::logger>& logger);
         virtual void connect();
         virtual bool isConnected() const { return mIsConnected; }
         virtual void disconnect();
@@ -24,6 +24,7 @@ class ModbusContext : public IModbusContext {
             modbus_free(mCtx);
         };
     private:
+        std::shared_ptr<spdlog::logger>_logger;
         void handleError(const std::string& desc);
         bool mIsConnected = false;
         ModbusNetworkConfig::Type mNetworkType;

@@ -28,6 +28,9 @@ TEST_CASE("Modbus scheduler") {
     std::chrono::nanoseconds duration = std::chrono::seconds(1000);
 
     modmqttd::ModbusScheduler scheduler;
+    std::shared_ptr<spdlog::logger>_logger; 
+    _logger = modmqttd::Log::new_logger("test");
+    scheduler.init(_logger);
     scheduler.setPollSpecification(source);
 
     SECTION ("should return register and delay=1sec for next poll") {

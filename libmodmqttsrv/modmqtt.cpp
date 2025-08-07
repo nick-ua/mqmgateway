@@ -133,6 +133,7 @@ parsePayloadType(const YAML::Node& data) {
 
 ModMqtt::ModMqtt()
 {
+    _logger = Log::new_logger("mqtt");
     // unit tests create main class multiple times
     // reset global flag at each creation
     gSignalStatus = -1;
@@ -144,7 +145,7 @@ ModMqtt::ModMqtt()
 void ModMqtt::init(const std::string& configPath) {
     std::string targetPath(configPath);
     if (configPath.empty()) {
-        spdlog::warn("No config path, trying to read config.yaml from working directory");
+        _logger->warn("No config path, trying to read config.yaml from working directory");
         targetPath = "./config.yaml";
     }
     YAML::Node config = YAML::LoadFile(targetPath);
@@ -176,7 +177,7 @@ ModMqtt::init(const YAML::Node& config) {
         );
 
         if (mqtt_spec == mqtt_specs.end()) {
-            spdlog::error("No mqtt topics declared for [{}], ignoring poll group", netname);
+            _logger->error("No mqtt topics declared for [{}], ignoring poll group", netname);
             continue;
         } else {
             for(const auto& reg: mqtt_spec->mRegisters) {
@@ -189,9 +190,9 @@ ModMqtt::init(const YAML::Node& config) {
             [&netname](const std::shared_ptr<ModbusClient>& client) -> bool { return client->mNetworkName == netname; }
         );
         if (client == mModbusClients.end()) {
-            spdlog::error("Modbus client for network [{}] not initialized, ignoring specification", netname);
+            _logger->error("Modbus client for network [{}] not initialized, ignoring specification", netname);
         } else {
-            spdlog::debug("Sending register specification to modbus thread for network {}", netname);
+            _logger->debug("Sending register specification to modbus thread for network {}", netname);
             (*client)->mToModbusQueue.enqueue(QueueItem::create(*sit));
         }
     };
@@ -261,7 +262,7 @@ ModMqtt::initServer(const YAML::Node& config) {
                     throw ConfigurationException(config.Mark(), std::string("Converter plugin ") + plugin->getName() + " already loaded");
                 }
 
-                spdlog::info("Added converter plugin {}", plugin->getName());
+                _logger->info("Added converter plugin {}", plugin->getName());
                 mConverterPlugins.push_back(plugin);
             } catch (const std::exception& ex) {
                 throw ConfigurationException(config.Mark(), ex.what());
@@ -276,7 +277,7 @@ ModMqtt::initConverterPlugin(const std::string& name) {
     std::filesystem::path current_path = name;
     auto path_it = mConverterPaths.begin();
     do {
-        spdlog::debug("Checking {}", name);
+        _logger->debug("Checking {}", name);
         if (std::filesystem::exists(current_path)) {
             final_path = current_path.string();
             break;
@@ -295,7 +296,7 @@ ModMqtt::initConverterPlugin(const std::string& name) {
         throw ConvPluginNotFoundException(std::string("Converter plugin ") + name + " not found");
     }
 
-    spdlog::debug("Trying to load converter plugin from {}", final_path);
+    _logger->debug("Trying to load converter plugin from {}", final_path);
 
     std::shared_ptr<ConverterPlugin> plugin = modmqttd::dll_import<ConverterPlugin>(final_path,"converter_plugin");
 
@@ -317,7 +318,7 @@ void ModMqtt::initBroker(const YAML::Node& config) {
     MqttBrokerConfig brokerConfig(broker);
 
     mMqtt->setBrokerConfig(brokerConfig);
-    spdlog::debug("Broker configuration initialized");
+    _logger->debug("Broker configuration initialized");
 }
 
 std::vector<modmqttd::MsgRegisterPoll>
@@ -403,13 +404,13 @@ ModMqtt::initModbusClients(const YAML::Node& config) {
 
         const YAML::Node& old_groups(network["poll_groups"]);
         if (old_groups.IsDefined()) {
-            spdlog::warn("'network.poll_groups' are deprecated and will be removed in future releases. Please use 'slaves' section and define per-slave poll_groups instead");
+            _logger->warn("'network.poll_groups' are deprecated and will be removed in future releases. Please use 'slaves' section and define per-slave poll_groups instead");
             spec.merge(readModbusPollGroups(modbus_config.mName, -1, old_groups));
         }
         ret.mPollSpecification.push_back(spec);
     }
     mMqtt->setModbusClients(mModbusClients);
-    spdlog::debug("{} modbus client(s) initialized", mModbusClients.size());
+    _logger->debug("{} modbus client(s) initialized", mModbusClients.size());
     return ret;
 }
 
@@ -465,7 +466,7 @@ ModMqtt::parseObject(
     }
 
     MqttObject ret(topic);
-    spdlog::debug("processing object {}", ret.getTopic() );
+    _logger->debug("processing object {}", ret.getTopic() );
 
     bool retain = true;
     if (ConfigTools::readOptionalValue<bool>(retain, pData, "retain"))
@@ -511,7 +512,7 @@ ModMqtt::parseObject(
 
     ret.setPublishMode(pmode, everyPollRefresh);
     if (pmode == PublishMode::EVERY_POLL) {
-        spdlog::debug("Min publish rate for {} set to {}ms", ret.getStateTopic(), std::chrono::duration_cast<std::chrono::milliseconds>(everyPollRefresh).count());
+        _logger->debug("Min publish rate for {} set to {}ms", ret.getStateTopic(), std::chrono::duration_cast<std::chrono::milliseconds>(everyPollRefresh).count());
     }
 
     if (!yAvail.IsDefined())
@@ -781,13 +782,13 @@ ModMqtt::initObjects(const YAML::Node& config, const ModMqtt::ModbusInitData& mo
 
                     objects.push_back(object);
                     nextCommandId = parseObjectCommands(object.getTopic(), nextCommandId, objdata["commands"], currentNetwork, defaultSlaveId);
-                    spdlog::debug("object for topic {} created", object.getTopic());
+                    _logger->debug("object for topic {} created", object.getTopic());
                     created.insert(defaultSlaveId);
                 }
             }
         }
     }
-    spdlog::debug("Finished reading mqtt object declarations"); 
+    _logger->debug("Finished reading mqtt object declarations"); 
     return objects;
 }
 
@@ -833,11 +834,11 @@ void ModMqtt::start() {
 
     // TODO if broker is down and modbus is up then mSlaveQueues will grow forever and
     // memory allocated by queues will never be released. Add MsgStartPolling?
-    spdlog::debug("Performing initial connection to mqtt broker"); \
+    _logger->debug("Performing initial connection to mqtt broker"); \
     do {
         mMqtt->start();
         if (mMqtt->isConnected()) {
-            spdlog::debug("Broker connected, entering main loop");
+            _logger->debug("Broker connected, entering main loop");
             break;
         }
         waitForSignal();
@@ -851,7 +852,7 @@ void ModMqtt::start() {
             int currentSignal = gSignalStatus;
             gSignalStatus = -1;
             if (currentSignal == SIGTERM) {
-                spdlog::info("Got SIGTERM, exiting…");
+                _logger->info("Got SIGTERM, exiting…");
                 break;
             } else if (currentSignal == SIGHUP) {
                 //TODO reload configuration, reconnect broker and
@@ -859,12 +860,12 @@ void ModMqtt::start() {
             }
             currentSignal = -1;
         } else if (gSignalStatus == 0) {
-            spdlog::info("Got stop request, exiting…");
+            _logger->info("Got stop request, exiting…");
             break;
         }
     };
 
-    spdlog::info("Stopping modbus clients");
+    _logger->info("Stopping modbus clients");
     for(std::vector<std::shared_ptr<ModbusClient>>::iterator client = mModbusClients.begin();
         client < mModbusClients.end(); client++)
     {
@@ -875,7 +876,7 @@ void ModMqtt::start() {
     processModbusMessages();
 
     if (mMqtt->isConnected()) {
-        spdlog::info("Publishing availability status 0 for all registers");
+        _logger->info("Publishing availability status 0 for all registers");
         for(std::vector<std::shared_ptr<ModbusClient>>::iterator client = mModbusClients.begin();
             client < mModbusClients.end(); client++)
         {
@@ -883,26 +884,26 @@ void ModMqtt::start() {
         }
     }
 
-    spdlog::debug("Shutting down mosquitto client");
+    _logger->debug("Shutting down mosquitto client");
     // If connected, then shutdown()
     // will send disconnection request to mqtt broker.
     // After disconnection mMqtt will notify global queue mutex
     // Otherwise we are already stopped.
     mMqtt->shutdown();
     if (mMqtt->isStarted()) {
-        spdlog::debug("Waiting for disconnection event");
+        _logger->debug("Waiting for disconnection event");
         waitForQueues();
     }
 
     //TODO mosquitto thread could add some messages to
     //mModbusClients queue between ModbusClient::stop() and MqttClient::shutdown()
     //Cleanup those messages here
-    spdlog::info("Shutdown finished");
+    _logger->info("Shutdown finished");
 }
 
 void
 ModMqtt::stop() {
-    spdlog::debug("Sending stop request to ModMqtt server");
+    _logger->debug("Sending stop request to ModMqtt server");
     gSignalStatus = 0;
     notifyQueues();
 }
@@ -927,7 +928,7 @@ ModMqtt::processModbusMessages() {
                 std::unique_ptr<MsgModbusNetworkState> val(item.getData<MsgModbusNetworkState>());
                 mMqtt->processModbusNetworkState(val->mNetworkName, val->mIsUp);
             } else {
-                spdlog::error("Unknown message from modbus thread, ignoring");
+                _logger->error("Unknown message from modbus thread, ignoring");
             }
         }
     }
